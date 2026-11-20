@@ -7,6 +7,7 @@ map with numbered pins, thirty-two briefs, a date-check box and a footer.
 Warm palette: cream paper, terracotta, ochre, brown.
 """
 import math
+import os
 import random
 from PIL import Image, ImageDraw, ImageFont
 
@@ -37,7 +38,13 @@ LB = "/usr/share/fonts/truetype/liberation/"
 
 def sans(size, bold=False):
     name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
-    return ImageFont.truetype(DJ + name, size)
+    try:
+        return ImageFont.truetype(DJ + name, size)
+    except OSError:
+        try:
+            return ImageFont.truetype(name, size)
+        except OSError:
+            return ImageFont.load_default()
 
 
 def serif(size, bold=False, italic=False):
@@ -47,7 +54,13 @@ def serif(size, bold=False, italic=False):
         name = "LiberationSerif-Bold.ttf"
     else:
         name = "LiberationSerif-Regular.ttf"
-    return ImageFont.truetype(LB + name, size)
+    try:
+        return ImageFont.truetype(LB + name, size)
+    except OSError:
+        try:
+            return ImageFont.truetype(name, size)
+        except OSError:
+            return ImageFont.load_default()
 
 
 def wrap(d, text, font, width):
@@ -560,8 +573,25 @@ def main():
            font=serif(15, italic=True), fill=(90, 78, 64))
 
     out = im.resize((1024, 1024), Image.LANCZOS)
-    out.save("entry.png")
-    print("saved entry.png 1024x1024")
+    candidates = []
+    output_dir = os.environ.get("MAKEFUN_OUTPUT_DIR")
+    if output_dir:
+        candidates.append(output_dir)
+    candidates.append(".")
+    candidates.append(os.path.dirname(os.path.abspath(__file__)))
+    last_error = None
+    saved_path = None
+    for candidate in candidates:
+        try:
+            saved_path = os.path.join(candidate, "entry.png")
+            out.save(saved_path)
+            break
+        except OSError as exc:
+            last_error = exc
+            saved_path = None
+    if saved_path is None:
+        raise last_error
+    print(f"saved {saved_path} 1024x1024")
 
 
 if __name__ == "__main__":
